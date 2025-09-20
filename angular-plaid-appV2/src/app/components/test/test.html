@@ -1,8 +1,13 @@
 <h1>Welcome to the Plaid App Consumer!</h1>
-<lib-plaid-link-demo
+
+@if (linkToken) {
+<ng-plaid-link
   [linkToken]="linkToken"
   (onSuccess)="onSuccess($event)"
   (onExit)="onExit($event)"
   (onEvent)="onEvent($event)"
 >
-</lib-plaid-link-demo>
+</ng-plaid-link>
+} @else {
+<app-create-user (onUserCreated)="onUserCreated($event)"></app-create-user>
+}
