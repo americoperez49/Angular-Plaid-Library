@@ -1,7 +1,6 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgZone } from '@angular/core';
-import { Subscription } from 'rxjs';
 
 import { PlaidLinkService } from './plaid-link.service';
 import {
@@ -32,20 +31,6 @@ import {
     <button (click)="openPlaidLink()" [disabled]="!plaidLinkService.isReady() || isLoading()">
       {{ isLoading() ? 'Opening...' : 'Open Plaid Link' }}
     </button>
-
-    <h3>Events:</h3>
-    <ul>
-      <li *ngFor="let event of events">
-        <strong>{{ event.eventName }}</strong
-        >: {{ event.metadata | json }}
-      </li>
-    </ul>
-
-    <h3>Success Responses:</h3>
-    <pre *ngIf="lastSuccess">{{ lastSuccess | json }}</pre>
-
-    <h3>Exit Responses:</h3>
-    <pre *ngIf="lastExit">{{ lastExit | json }}</pre>
   `,
   styles: [
     `
@@ -88,61 +73,21 @@ export class PlaidLinkDemoComponent implements OnInit, OnDestroy {
   readonly plaidLinkService = inject(PlaidLinkService);
   private readonly ngZone = inject(NgZone);
 
-  // For displaying events
-  events: { eventName: string; metadata: PlaidLinkEventMetadata }[] = [];
-  lastSuccess: { public_token: string; metadata: PlaidLinkSuccessMetadata } | null = null;
-  lastExit: { error: PlaidLinkError | null; metadata: PlaidLinkExitMetadata } | null = null;
+  @Input() linkToken: string | null = null; // Default to empty string
+  @Output() onSuccess = new EventEmitter<any>(); // Using 'any' for now, will refine types
+  @Output() onExit = new EventEmitter<any>(); // Using 'any' for now, will refine types
+  @Output() onEvent = new EventEmitter<any>(); // Using 'any' for now, will refine types
+  @Output() onLoad = new EventEmitter<void>();
 
-  private subscriptions = new Subscription();
+  // Removed events, lastSuccess, lastExit properties as they are no longer needed for internal display
+
+  // Removed Subscription as it's no longer used
+  // private subscriptions = new Subscription();
   private isOpening = false; // Local state to prevent multiple opens
 
-  ngOnInit(): void {
-    // Subscribe to Plaid Link events
-    this.subscriptions.add(
-      this.plaidLinkService.onSuccess$.subscribe((response) => {
-        this.ngZone.run(() => {
-          // Ensure updates happen within Angular's zone
-          this.lastSuccess = response;
-          this.isOpening = false; // Reset loading state on success
-          console.log('Plaid Link Success:', response);
-        });
-      })
-    );
+  ngOnInit(): void {}
 
-    this.subscriptions.add(
-      this.plaidLinkService.onExit$.subscribe((response) => {
-        this.ngZone.run(() => {
-          // Ensure updates happen within Angular's zone
-          this.lastExit = response;
-          this.isOpening = false; // Reset loading state on exit
-          console.log('Plaid Link Exit:', response);
-        });
-      })
-    );
-
-    this.subscriptions.add(
-      this.plaidLinkService.onEvent$.subscribe((event) => {
-        this.ngZone.run(() => {
-          // Ensure updates happen within Angular's zone
-          this.events.push(event);
-          // Keep only the last 10 events for brevity
-          if (this.events.length > 10) {
-            this.events.shift();
-          }
-          console.log('Plaid Link Event:', event);
-        });
-      })
-    );
-  }
-
-  ngOnDestroy(): void {
-    this.subscriptions.unsubscribe();
-    // Optionally destroy the Plaid Link handler when the component is destroyed
-    // This depends on the lifecycle management strategy.
-    // If the service manages a single instance, destroying it here might be too aggressive.
-    // For now, we'll rely on the service's destroy method if needed.
-    // this.plaidLinkService.destroy();
-  }
+  ngOnDestroy(): void {}
 
   openPlaidLink(): void {
     if (!this.plaidLinkService.isReady() || this.isOpening) {
@@ -151,38 +96,38 @@ export class PlaidLinkDemoComponent implements OnInit, OnDestroy {
 
     this.isOpening = true; // Set loading state
 
-    // IMPORTANT: Replace 'YOUR_GENERATED_LINK_TOKEN' with a dynamically generated token
-    // from your backend. This is a placeholder for demonstration.
-    const linkToken = 'YOUR_GENERATED_LINK_TOKEN';
+    // Use the input linkToken
+    const linkToken = this.linkToken;
 
-    if (!linkToken || linkToken === 'YOUR_GENERATED_LINK_TOKEN') {
-      console.error(
-        'Link token is missing or is a placeholder. Please generate a real link token.'
-      );
-      // The service handles setting its own error state.
-      // The component should react to the error signal, not set it directly.
+    if (!linkToken) {
+      // Simplified check for empty token
+      console.error('Link token is missing.');
       this.isOpening = false;
+      // Emit an exit event with an error if token is missing
+      this.onExit.emit({
+        error: { error_type: 'INVALID_INPUT', error_message: 'Link token is missing.' },
+        metadata: {},
+      });
       return;
     }
 
     const options: PlaidLinkOptions = {
       token: linkToken,
       onSuccess: (public_token, metadata) => {
-        // This callback is handled by the service, but you can also react here if needed.
-        console.log('Demo Component: onSuccess received', public_token, metadata);
-        // Typically, you would exchange the public_token for an access_token on your backend.
+        this.onSuccess.emit({ public_token, metadata });
+        this.isOpening = false; // Reset loading state on success
       },
       onExit: (error, metadata) => {
-        // This callback is handled by the service, but you can also react here if needed.
-        console.log('Demo Component: onExit received', error, metadata);
+        this.onExit.emit({ error, metadata });
+        this.isOpening = false; // Reset loading state on exit
       },
       onEvent: (eventName, metadata) => {
-        // This callback is handled by the service, but you can also react here if needed.
-        console.log('Demo Component: onEvent received', eventName, metadata);
+        this.onEvent.emit({ eventName, metadata });
       },
-      // onLoad: () => {
-      //   console.log('Demo Component: onLoad called');
-      // }
+      onLoad: () => {
+        this.onLoad.emit();
+        console.log('Plaid Link onLoad called'); // Keep this log for debugging if needed
+      },
     };
 
     this.plaidLinkService.open(options);
