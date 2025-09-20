@@ -3,5 +3,31 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
+    "plaid-link": {
+      "projectType": "library",
+      "root": "projects/plaid-link",
+      "sourceRoot": "projects/plaid-link/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/plaid-link/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/plaid-link/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:karma",
+          "options": {
+            "tsConfig": "projects/plaid-link/tsconfig.spec.json"
+          }
+        }
+      }
+    }
   }
 }
