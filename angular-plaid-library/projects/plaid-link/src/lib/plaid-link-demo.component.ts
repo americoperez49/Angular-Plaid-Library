@@ -12,7 +12,7 @@ import {
 } from './plaid-link.types';
 
 @Component({
-  selector: 'lib-plaid-link-demo',
+  selector: 'ng-plaid-link',
   standalone: true, // Using standalone component for simplicity
   imports: [CommonModule],
   template: `
