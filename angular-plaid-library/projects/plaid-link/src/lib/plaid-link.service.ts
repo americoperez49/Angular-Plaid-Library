@@ -125,6 +125,7 @@ export class PlaidLinkService {
           this.ngZone.run(() => {
             this._linkSessionId.set(metadata.link_session_id || null);
             this._onSuccessSubject.next({ public_token, metadata });
+            options.onSuccess?.(public_token, metadata); // Call original if provided
           });
         },
         onExit: (error, metadata) => {
@@ -132,6 +133,7 @@ export class PlaidLinkService {
             this._error.set(error);
             this._linkSessionId.set(metadata.link_session_id || null);
             this._onExitSubject.next({ error, metadata });
+            options.onExit?.(error, metadata); // Call original if provided
           });
         },
         onEvent: (eventName, metadata) => {
@@ -141,6 +143,7 @@ export class PlaidLinkService {
               this._linkSessionId.set(metadata.link_session_id);
             }
             this._onEventSubject.next({ eventName, metadata });
+            options.onEvent?.(eventName, metadata); // Call original if provided
           });
         },
         onLoad: () => {
